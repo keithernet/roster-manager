@@ -51,6 +51,28 @@
   color: #d63384;
 }
 
+.inning-buttons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.assign-positions-btn {
+  background: #2c5f2d;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+  min-width: 24px;
+}
+
+.assign-positions-btn:hover {
+  background: #1e4220;
+}
+
 .reset-inning-btn {
   background: #6c757d;
   color: white;

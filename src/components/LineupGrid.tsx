@@ -66,6 +66,10 @@ const LineupGrid: Component = () => {
     storeActions.resetInning(inning);
   };
 
+  const assignPositions = (inning: number) => {
+    storeActions.assignPositionsForInning(inning);
+  };
+
   // Create individual memos for each inning to ensure proper reactivity
   const inningValidations = Array.from({ length: 6 }, (_, inning) =>
     createMemo(() => {
@@ -139,13 +143,22 @@ const LineupGrid: Component = () => {
             {(_, index) => (
               <div class={`inning-header ${hasInningErrors(index()) ? 'has-errors' : ''}`}>
                 <span>Inning {index() + 1}</span>
-                <button
-                  class="reset-inning-btn"
-                  onClick={() => resetInning(index())}
-                  title="Reset this inning"
-                >
-                  ↻
-                </button>
+                <div class="inning-buttons">
+                  <button
+                    class="assign-positions-btn"
+                    onClick={() => assignPositions(index())}
+                    title="Auto-assign positions for this inning"
+                  >
+                    ⚾
+                  </button>
+                  <button
+                    class="reset-inning-btn"
+                    onClick={() => resetInning(index())}
+                    title="Reset this inning"
+                  >
+                    ↻
+                  </button>
+                </div>
               </div>
             )}
           </For>

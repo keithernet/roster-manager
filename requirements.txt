@@ -26,6 +26,8 @@
 - Support for all baseball positions: P (Pitcher), C (Catcher), 1B, 2B, 3B, SS, LF, CF, RF
 - BENCH position support (multiple players can be on bench)
 - Blank/unassigned option as default state for new players
+- There is a button that will semi-randomly assign positions to all the players only allowing
+  positions that they can play. Do not assign the same position more than twice.
 - BENCH is the default display for unassigned positions
 - BENCH always available in dropdowns regardless of player capabilities
 

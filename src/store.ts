@@ -109,6 +109,42 @@ export const storeActions = {
       newPlayers.splice(toIndex, 0, moved);
       return newPlayers;
     });
+  },
+
+  assignPositionsForInning: (inning: number) => {
+    const players = gameState.players;
+    if (players.length === 0) return;
+
+    // Reset inning first
+    const newAssignments: InningLineup = {};
+    players.forEach(player => {
+      newAssignments[player.id] = 'BENCH';
+    });
+
+    // Create a list of available positions to assign
+    const positionsToAssign = [...FIELD_POSITIONS];
+    const playersAvailable = [...players];
+
+    // Shuffle players for randomness in assignment order
+    for (let i = playersAvailable.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [playersAvailable[i], playersAvailable[j]] = [playersAvailable[j], playersAvailable[i]];
+    }
+
+    // Try to assign each position
+    positionsToAssign.forEach(position => {
+      // Find first available player who can play this position and isn't already assigned
+      const availablePlayer = playersAvailable.find(player =>
+        player.positions.includes(position) && newAssignments[player.id] === 'BENCH'
+      );
+
+      if (availablePlayer) {
+        newAssignments[availablePlayer.id] = position;
+      }
+    });
+
+    // Update the store
+    setGameState('lineup', inning, newAssignments);
   }
 };
 
