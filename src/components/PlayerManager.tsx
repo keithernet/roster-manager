@@ -1,5 +1,5 @@
 import { Component, createSignal, For, createMemo } from 'solid-js';
-import { gameState, storeActions } from '../store';
+import {gameState, sortedPlayers, storeActions} from '../store';
 import { Position, ALL_POSITIONS, FIELD_POSITIONS } from '../types';
 import './PlayerManager.css';
 
@@ -117,7 +117,7 @@ const PlayerManager: Component = () => {
           </div>
 
           <div class="player-list">
-            <For each={gameState.players}>
+            <For each={sortedPlayers()}>
               {(player) => (
                 <div class="player-item">
                   <div class="player-info">

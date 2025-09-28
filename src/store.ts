@@ -1,6 +1,7 @@
 import { createStore } from 'solid-js/store';
 import {createComputed, createEffect, createMemo} from 'solid-js';
 import { GameState, Player, InningLineup, Position, FIELD_POSITIONS, ValidationError } from './types';
+import {sortBy} from 'ramda';
 
 const STORAGE_KEY = 'baseball-roster-state';
 
@@ -46,6 +47,14 @@ function saveStateToStorage(state: GameState) {
 
 export const [gameState, setGameState] = createStore<GameState>(loadStateFromStorage());
 
+export const sortedPlayers = createMemo(() => {
+  return sortBy((a: Player, b: Player) => a.name.toLowerCase(), gameState.players);
+});
+
+createEffect(() =>{
+  console.log(sortedPlayers().map((player: Player) => player.name))
+})
+
 // Auto-save to localStorage
 createEffect(() => {
   saveStateToStorage(gameState);
@@ -53,7 +62,7 @@ createEffect(() => {
 
 export const rosterErrors = createMemo(() =>
   validateAllInnings(gameState)
-, [])
+, )
 
 // Store actions
 export const storeActions = {
@@ -191,19 +200,4 @@ export function validateAllInnings(state: GameState): ValidationError[][] {
     allErrors[i] = validateLineup(state, i);
   }
   return allErrors;
-}
-
-export function getPositionCounts(playerId: string): Record<Position, number> {
-  const counts: Record<Position, number> = {
-    P: 0, C: 0, '1B': 0, '2B': 0, '3B': 0, SS: 0, LF: 0, CF: 0, RF: 0, BENCH: 0
-  };
-
-  gameState.lineup.forEach(inning => {
-    const position = inning[playerId];
-    if (position) {
-      counts[position]++;
-    }
-  });
-
-  return counts;
 }
