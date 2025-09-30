@@ -1,4 +1,4 @@
-import { Component, For, createSignal, createMemo } from 'solid-js';
+import {Component, For, createSignal, createMemo, Show} from 'solid-js';
 import {gameState, rosterErrors, storeActions} from '../store';
 import { Position, ALL_POSITIONS, FIELD_POSITIONS, ValidationError } from '../types';
 import './LineupGrid.css';
@@ -6,6 +6,8 @@ import './LineupGrid.css';
 const LineupGrid: Component = () => {
   const [draggedPlayer, setDraggedPlayer] = createSignal<string | null>(null);
   const [draggedOverIndex, setDraggedOverIndex] = createSignal<number | null>(null);
+
+  const [printMode, setPrintMode] = createSignal(false);
 
   const handleDragStart = (e: DragEvent, playerId: string, index: number) => {
     setDraggedPlayer(playerId);
@@ -128,13 +130,13 @@ const LineupGrid: Component = () => {
     return inningValidations[inning]()?.length > 0;
   };
 
-  const getErrorsForInning = (inning: number) => {
-    return inningValidations[inning]() || [];
-  };
+  function togglePrint(){
+   setPrintMode(!printMode());
+  }
 
   return (
     <div class="lineup-grid">
-      <h2>Lineup Grid</h2>
+      <h2>Lineup Grid <a href="#" onClick={() => togglePrint()}>{printMode() ? "Edit": "Print"}</a></h2>
 
       <div class="grid-container">
         <div class="grid-header">
@@ -143,6 +145,7 @@ const LineupGrid: Component = () => {
             {(_, index) => (
               <div class={`inning-header ${hasInningErrors(index()) ? 'has-errors' : ''}`}>
                 <span>Inning {index() + 1}</span>
+                <Show when={!printMode()}>
                 <div class="inning-buttons">
                   <button
                     class="assign-positions-btn"
@@ -159,6 +162,7 @@ const LineupGrid: Component = () => {
                     ↻
                   </button>
                 </div>
+                </Show>
               </div>
             )}
           </For>
@@ -184,6 +188,7 @@ const LineupGrid: Component = () => {
                 <For each={Array(6).fill(0)}>
                   {(_, inningIndex) => (
                     <div class="position-cell">
+                      <Show when={!printMode()}>
                       <select
                         class={`position-select ${hasInningErrors(inningIndex()) ? 'has-error' : ''}`}
                         value={getPositionForInning(player.id, inningIndex())}
@@ -195,6 +200,10 @@ const LineupGrid: Component = () => {
                           )}
                         </For>
                       </select>
+                      </Show>
+                      <Show when={printMode()}>
+                        {getPositionForInning(player.id, inningIndex())}
+                      </Show>
                     </div>
                   )}
                 </For>

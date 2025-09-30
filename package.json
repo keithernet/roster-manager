@@ -14,6 +14,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@types/ramda": "^0.31.1",
     "ramda": "^0.31.3",
     "solid-js": "^1.9.9"
   },

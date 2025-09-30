@@ -1,7 +1,7 @@
 import { createStore } from 'solid-js/store';
 import {createComputed, createEffect, createMemo} from 'solid-js';
 import { GameState, Player, InningLineup, Position, FIELD_POSITIONS, ValidationError } from './types';
-import {sortBy} from 'ramda';
+import {sortBy, omit} from 'ramda';
 
 const STORAGE_KEY = 'baseball-roster-state';
 
@@ -48,6 +48,7 @@ function saveStateToStorage(state: GameState) {
 export const [gameState, setGameState] = createStore<GameState>(loadStateFromStorage());
 
 export const sortedPlayers = createMemo(() => {
+  // @ts-ignore
   return sortBy((a: Player, b: Player) => a.name.toLowerCase(), gameState.players);
 });
 
@@ -84,14 +85,8 @@ export const storeActions = {
   removePlayer: (playerId: string) => {
     setGameState('players', (players) => players.filter(p => p.id !== playerId));
 
-    // Remove from all innings
-    for (let i = 0; i < 6; i++) {
-      setGameState('lineup', i, (inning) => {
-        const newInning = { ...inning };
-        delete newInning[playerId];
-        return newInning;
-      });
-    }
+    const newLineup = gameState.lineup.map(lineup => omit([playerId], lineup));
+    setGameState('lineup', newLineup);
   },
 
   updatePlayerPosition: (playerId: string, inning: number, position: Position) => {
