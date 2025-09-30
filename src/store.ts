@@ -65,6 +65,25 @@ export const rosterErrors = createMemo(() =>
   validateAllInnings(gameState)
 , )
 
+export const playerPositionCounts = createMemo(() => {
+  const counts: Record<string, Record<Position, number>> = {};
+
+  gameState.players.forEach(player => {
+    counts[player.id] = {
+      P: 0, C: 0, '1B': 0, '2B': 0, '3B': 0, SS: 0, LF: 0, CF: 0, RF: 0, BENCH: 0
+    };
+
+    gameState.lineup.forEach(inning => {
+      const position = inning[player.id];
+      if (position) {
+        counts[player.id][position]++;
+      }
+    });
+  });
+
+  return counts;
+});
+
 // Store actions
 export const storeActions = {
   addPlayer: (name: string, positions: Position[]) => {

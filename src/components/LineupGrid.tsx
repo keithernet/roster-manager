@@ -1,5 +1,5 @@
 import {Component, For, createSignal, createMemo, Show} from 'solid-js';
-import {gameState, rosterErrors, storeActions} from '../store';
+import {gameState, rosterErrors, storeActions, playerPositionCounts} from '../store';
 import { Position, ALL_POSITIONS, FIELD_POSITIONS, ValidationError } from '../types';
 import './LineupGrid.css';
 
@@ -130,6 +130,15 @@ const LineupGrid: Component = () => {
     return inningValidations[inning]()?.length > 0;
   };
 
+  const formatPositionSummary = (playerId: string) => {
+    const counts = playerPositionCounts()[playerId] || {};
+    const summary = ALL_POSITIONS
+      .filter(pos => counts[pos] > 0)
+      .map(pos => `${pos}(${counts[pos]})`)
+      .join(', ');
+    return summary || 'No assignments';
+  };
+
   function togglePrint(){
    setPrintMode(!printMode());
   }
@@ -182,7 +191,10 @@ const LineupGrid: Component = () => {
               >
                 <div class="player-cell">
                   <span class="drag-handle">⋮⋮</span>
-                  <span class="player-name">{player.name}</span>
+                  <div class="player-info">
+                    <span class="player-name">{player.name}</span>
+                    <span class="player-positions">{formatPositionSummary(player.id)}</span>
+                  </div>
                 </div>
 
                 <For each={Array(6).fill(0)}>

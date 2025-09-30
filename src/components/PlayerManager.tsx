@@ -1,5 +1,5 @@
 import { Component, createSignal, For, createMemo } from 'solid-js';
-import {gameState, sortedPlayers, storeActions} from '../store';
+import {gameState, sortedPlayers, storeActions, playerPositionCounts} from '../store';
 import { Position, ALL_POSITIONS, FIELD_POSITIONS } from '../types';
 import './PlayerManager.css';
 
@@ -36,23 +36,8 @@ const PlayerManager: Component = () => {
     setSelectedPositions(new Set<Position>(FIELD_POSITIONS));
   };
 
-  const getPositionCounts = (playerId: string) => {
-    const counts: Record<Position, number> = {
-      P: 0, C: 0, '1B': 0, '2B': 0, '3B': 0, SS: 0, LF: 0, CF: 0, RF: 0, BENCH: 0
-    };
-
-    gameState.lineup.forEach(inning => {
-      const position = inning[playerId];
-      if (position) {
-        counts[position]++;
-      }
-    });
-
-    return counts;
-  };
-
   const formatPositionSummary = (playerId: string) => {
-    const counts = getPositionCounts(playerId);
+    const counts = playerPositionCounts()[playerId] || {};
     const summary = ALL_POSITIONS
       .filter(pos => counts[pos] > 0)
       .map(pos => `${pos}(${counts[pos]})`)
