@@ -126,6 +126,9 @@ const LineupGrid: Component = () => {
     })
   );
 
+  const getOrdinal = (value: number) => value === 1 ? 'st' : value === 2 ? 'nd' : value === 3 ? 'rd': 'th';
+
+
   const hasInningErrors = (inning: number) => {
     return inningValidations[inning]()?.length > 0;
   };
@@ -137,6 +140,11 @@ const LineupGrid: Component = () => {
       .map(pos => `${pos}(${counts[pos]})`)
       .join(', ');
     return summary || 'No assignments';
+  };
+
+  const playsMoreThanTwoInningsAtSamePosition = (playerId: string) => {
+    const counts = playerPositionCounts()[playerId] || {};
+    return ALL_POSITIONS.some(pos => counts[pos] > 2);
   };
 
   function togglePrint(){
@@ -189,11 +197,13 @@ const LineupGrid: Component = () => {
                 onDrop={(e) => handleDrop(e, index())}
                 onDragEnd={handleDragEnd}
               >
-                <div class="player-cell">
+                <div class="player-cell" classList={{'too-many': playsMoreThanTwoInningsAtSamePosition(player.id)}}>
                   <span class="drag-handle">⋮⋮</span>
                   <div class="player-info">
                     <span class="player-name">{player.name}</span>
-                    <span class="player-positions">{formatPositionSummary(player.id)}</span>
+                    <Show when={!printMode()}>
+                      <span class="player-positions">{formatPositionSummary(player.id)}</span>
+                    </Show>
                   </div>
                 </div>
 
@@ -231,7 +241,7 @@ const LineupGrid: Component = () => {
           {(errors, idx) => {
             return errors.length > 0 ? (
               <div class="inning-errors">
-                <h4>{idx() + 1}th innning Errors:</h4>
+                <h4>{idx() + 1}{getOrdinal(idx() + 1)} inning Errors:</h4>
                 <For each={errors}>
                   {(error) => (
                     <div class={`error-message ${error.type}`}>

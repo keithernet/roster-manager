@@ -46,10 +46,11 @@
   position: relative;
 }
 
-.inning-header.has-errors {
+.inning-header.has-errors, .too-many {
   background: #ffe6e6;
   color: #d63384;
 }
+
 
 .inning-buttons {
   display: flex;
