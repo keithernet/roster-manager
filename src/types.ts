@@ -18,9 +18,18 @@ export interface InningLineup {
   [playerId: string]: Position;
 }
 
+export type Uid = `${string}-${string}`;
+
 export interface GameState {
-  players: Player[];
-  lineup: InningLineup[];
+  activeTeamId: Uid;
+  teams: [
+    {
+      id: Uid;
+      name: string;
+      players: Player[];
+      lineup: InningLineup[];
+    }
+  ]
 }
 
 export interface ValidationError {

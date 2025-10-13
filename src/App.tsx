@@ -1,11 +1,18 @@
-import { Component, createSignal } from 'solid-js';
+import { Component, createSignal, For, Show } from 'solid-js';
 import PlayerManager from './components/PlayerManager';
 import LineupGrid from './components/LineupGrid';
 import SettingsModal from './components/SettingsModal';
+import { gameState, storeActions, activeTeam } from './store';
 import './App.css';
 
 const App: Component = () => {
   const [isSettingsOpen, setIsSettingsOpen] = createSignal(false);
+  const [isTeamSelectorOpen, setIsTeamSelectorOpen] = createSignal(false);
+
+  const handleTeamChange = (teamId: string) => {
+    storeActions.switchTeam(teamId);
+    setIsTeamSelectorOpen(false);
+  };
 
   return (
     <div class="App">
@@ -15,13 +22,41 @@ const App: Component = () => {
             <h1>⚾ Baseball Roster Manager</h1>
             <p>Little League Roster and Lineup Management</p>
           </div>
-          <button
-            class="settings-button"
-            onClick={() => setIsSettingsOpen(true)}
-            title="Settings"
-          >
-            ⚙️
-          </button>
+          <div class="header-controls">
+            <div class="team-selector-container">
+              <button
+                class="team-selector-button"
+                onClick={() => setIsTeamSelectorOpen(!isTeamSelectorOpen())}
+                title="Select team"
+              >
+                {activeTeam().name} ▾
+              </button>
+              <Show when={isTeamSelectorOpen()}>
+                <div class="team-dropdown">
+                  <For each={gameState.teams}>
+                    {(team) => (
+                      <button
+                        class={`team-option ${team.id === gameState.activeTeamId ? 'active' : ''}`}
+                        onClick={() => handleTeamChange(team.id)}
+                      >
+                        {team.name}
+                        <Show when={team.id === gameState.activeTeamId}>
+                          <span class="checkmark">✓</span>
+                        </Show>
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </Show>
+            </div>
+            <button
+              class="settings-button"
+              onClick={() => setIsSettingsOpen(true)}
+              title="Settings"
+            >
+              ⚙️
+            </button>
+          </div>
         </div>
       </header>
       <main class="App-main">

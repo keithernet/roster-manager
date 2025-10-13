@@ -126,6 +126,133 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+/* Team management styles */
+.teams-list {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.team-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.team-item:hover {
+  background: #f3f4f6;
+}
+
+.team-name {
+  font-weight: 500;
+  color: #1f2937;
+  flex: 1;
+}
+
+.team-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.team-edit-btn,
+.team-delete-btn,
+.team-save-btn,
+.team-cancel-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.team-edit-btn:hover {
+  background: #e5e7eb;
+}
+
+.team-delete-btn:hover {
+  background: #fee2e2;
+}
+
+.team-save-btn {
+  color: #16a34a;
+}
+
+.team-save-btn:hover {
+  background: #dcfce7;
+}
+
+.team-cancel-btn {
+  color: #dc2626;
+}
+
+.team-cancel-btn:hover {
+  background: #fee2e2;
+}
+
+.team-edit-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #2563eb;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.team-edit-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.add-team-form {
+  display: flex;
+  gap: 8px;
+}
+
+.add-team-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.add-team-input:hover {
+  border-color: #2563eb;
+}
+
+.add-team-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.add-team-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.add-team-btn:hover {
+  background: #1e40af;
+  transform: translateY(-1px);
+}
+
 .modal-footer {
   padding: 16px 24px;
   border-top: 1px solid #e5e7eb;

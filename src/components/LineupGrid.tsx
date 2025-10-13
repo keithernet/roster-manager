@@ -1,5 +1,5 @@
 import {Component, For, createSignal, createMemo, Show} from 'solid-js';
-import {gameState, rosterErrors, storeActions, playerPositionCounts} from '../store';
+import {gameState, rosterErrors, storeActions, playerPositionCounts, activeTeam} from '../store';
 import { appSettings } from '../settingsStore';
 import { Position, ALL_POSITIONS, FIELD_POSITIONS, ValidationError } from '../types';
 import './LineupGrid.css';
@@ -46,7 +46,7 @@ const LineupGrid: Component = () => {
   };
 
   const getAvailablePositions = (playerId: string): Position[] => {
-    const player = gameState.players.find(p => p.id === playerId);
+    const player = activeTeam().players.find(p => p.id === playerId);
     if (!player) return ['BENCH'];
 
     // Always include BENCH, plus any positions the player can play
@@ -58,7 +58,7 @@ const LineupGrid: Component = () => {
   };
 
   const getPositionForInning = (playerId: string, inning: number): Position => {
-    return gameState.lineup[inning]?.[playerId] || 'BENCH';
+    return activeTeam().lineup[inning]?.[playerId] || 'BENCH';
   };
 
   const handlePositionChange = (playerId: string, inning: number, position: Position) => {
@@ -78,7 +78,7 @@ const LineupGrid: Component = () => {
     return Array.from({ length: appSettings.numberOfInnings }, (_, inning) =>
       createMemo(() => {
         const errors: ValidationError[] = [];
-        const assignments = gameState.lineup[inning];
+        const assignments = activeTeam().lineup[inning];
 
         if (!assignments || Object.keys(assignments).length === 0) {
           // If no assignments, all positions are missing
@@ -157,7 +157,7 @@ const LineupGrid: Component = () => {
 
   return (
     <div class="lineup-grid">
-      <h2>Lineup Grid <a href="#" onClick={() => togglePrint()}>{printMode() ? "Edit": "Print"}</a></h2>
+      <h2>{activeTeam().name} <a href="#" onClick={() => togglePrint()}>{printMode() ? "Edit": "Print"}</a></h2>
 
       <div class="grid-container">
         <div class="grid-header" style={`grid-template-columns: 200px repeat(${appSettings.numberOfInnings}, 1fr);`}>
@@ -190,7 +190,7 @@ const LineupGrid: Component = () => {
         </div>
 
         <div class="grid-body" style={`min-width: ${200 + (appSettings.numberOfInnings * 100)}px;`}>
-          <For each={gameState.players}>
+          <For each={activeTeam().players}>
             {(player, index) => (
               <div
                 class={`player-row ${draggedPlayer() === player.id ? 'dragging' : ''} ${draggedOverIndex() === index() ? 'drag-over' : ''}`}

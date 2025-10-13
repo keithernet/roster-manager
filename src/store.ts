@@ -1,68 +1,86 @@
-import { createStore } from 'solid-js/store';
-import {createComputed, createEffect, createMemo} from 'solid-js';
-import { GameState, Player, InningLineup, Position, FIELD_POSITIONS, ValidationError } from './types';
-import { appSettings } from './settingsStore';
-import {sortBy, omit} from 'ramda';
+import {createStore} from 'solid-js/store';
+import {createEffect, createMemo} from 'solid-js';
+import {FIELD_POSITIONS, GameState, InningLineup, Player, Position, Uid, ValidationError} from './types';
+import {appSettings} from './settingsStore';
+import {omit, sortBy} from 'ramda';
 
 const STORAGE_KEY = 'baseball-roster-state';
 
-function createInitialState(): GameState {
+function uid(): Uid{
+  return `${Date.now().toString(36)}-${Math.random().toString(36).substring(2)}`;
+}
+
+function createInitialState(): GameState{
+  const initialTeamId = uid();
   return {
-    players: [],
-    lineup: Array(appSettings.numberOfInnings).fill(null).map(() => ({}))
+    activeTeamId: initialTeamId,
+    teams: [
+      {
+        id: initialTeamId,
+        name: 'My Team',
+          players: [] as Player[],
+          lineup: Array(appSettings.numberOfInnings).fill(null).map(() => ({}))
+      }]
   };
 }
 
-function loadStateFromStorage(): GameState {
-  try {
+function loadStateFromStorage(): GameState{
+  try{
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
+    if(saved){
+      const parsed = JSON.parse(saved) as GameState;
       const requiredInnings = appSettings.numberOfInnings;
 
-      // Ensure we have the correct number of innings
-      while (parsed.lineup.length < requiredInnings) {
-        parsed.lineup.push({});
-      }
-      // Trim if we have too many innings
-      if (parsed.lineup.length > requiredInnings) {
-        parsed.lineup = parsed.lineup.slice(0, requiredInnings);
-      }
+      parsed.teams.forEach(team => {
+        // Ensure we have the correct number of innings
+        while(team.lineup.length < requiredInnings){
+          team.lineup.push({});
+        }
+        // Trim if we have too many innings
+        if(team.lineup.length > requiredInnings){
+          team.lineup = team.lineup.slice(0, requiredInnings);
+        }
 
-      // Initialize missing players to BENCH
-      parsed.players.forEach((player: Player) => {
-        parsed.lineup.forEach((inning: InningLineup, index: number) => {
-          if (!(player.id in inning)) {
-            parsed.lineup[index][player.id] = 'BENCH';
-          }
+        // Initialize missing players to BENCH
+        team.players.forEach((player: Player) => {
+          team.lineup.forEach((inning: InningLineup, index: number) => {
+            if(!(player.id in inning)){
+              team.lineup[index][player.id] = 'BENCH';
+            }
+          });
         });
       });
+
       return parsed;
     }
-  } catch (error) {
+  } catch(error){
     console.warn('Failed to load state from localStorage:', error);
   }
   return createInitialState();
 }
 
-function saveStateToStorage(state: GameState) {
-  try {
+function saveStateToStorage(state: GameState){
+  try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (error) {
+  } catch(error){
     console.warn('Failed to save state to localStorage:', error);
   }
 }
 
 export const [gameState, setGameState] = createStore<GameState>(loadStateFromStorage());
 
-export const sortedPlayers = createMemo(() => {
-  // @ts-ignore
-  return sortBy((a: Player, b: Player) => a.name.toLowerCase(), gameState.players);
+export const activeTeamIndex= createMemo(() => {
+  return gameState.teams.findIndex(t => t.id === gameState.activeTeamId)!;
 });
 
-createEffect(() =>{
-  console.log(sortedPlayers().map((player: Player) => player.name))
-})
+export const activeTeam = createMemo(() => {
+  return gameState.teams.find(t => t.id === gameState.activeTeamId)!;
+});
+
+export const sortedPlayers = createMemo(() => {
+  // @ts-ignore
+  return sortBy((a: Player, b: Player) => a.name.toLowerCase(), activeTeam().players);
+});
 
 // Auto-save to localStorage
 createEffect(() => {
@@ -72,39 +90,39 @@ createEffect(() => {
 // Adjust lineup when number of innings changes
 createEffect(() => {
   const requiredInnings = appSettings.numberOfInnings;
-  const currentInnings = gameState.lineup.length;
+  const currentInnings = activeTeam().lineup.length;
 
-  if (currentInnings < requiredInnings) {
+  if(currentInnings < requiredInnings){
     // Add missing innings
     const newInnings = Array(requiredInnings - currentInnings).fill(null).map(() => {
       const inning: InningLineup = {};
-      gameState.players.forEach(player => {
+      activeTeam().players.forEach(player => {
         inning[player.id] = 'BENCH';
       });
       return inning;
     });
-    setGameState('lineup', [...gameState.lineup, ...newInnings]);
-  } else if (currentInnings > requiredInnings) {
+    setGameState('teams', activeTeamIndex(),'lineup', [...activeTeam().lineup, ...newInnings]);
+  } else if(currentInnings > requiredInnings){
     // Remove extra innings
-    setGameState('lineup', gameState.lineup.slice(0, requiredInnings));
+    setGameState('teams', activeTeamIndex(), 'lineup', activeTeam().lineup.slice(0, requiredInnings));
   }
 });
 
 export const rosterErrors = createMemo(() =>
-  validateAllInnings(gameState)
-, )
+    validateAllInnings(gameState)
+  ,)
 
 export const playerPositionCounts = createMemo(() => {
   const counts: Record<string, Record<Position, number>> = {};
 
-  gameState.players.forEach(player => {
+  activeTeam().players.forEach(player => {
     counts[player.id] = {
       P: 0, C: 0, '1B': 0, '2B': 0, '3B': 0, SS: 0, LF: 0, CF: 0, RF: 0, BENCH: 0
     };
 
-    gameState.lineup.forEach(inning => {
+    activeTeam().lineup.forEach(inning => {
       const position = inning[player.id];
-      if (position) {
+      if(position){
         counts[player.id][position]++;
       }
     });
@@ -115,6 +133,46 @@ export const playerPositionCounts = createMemo(() => {
 
 // Store actions
 export const storeActions = {
+  addTeam: (name: string) => {
+    const newTeamId = uid();
+    const newTeam = {
+      id: newTeamId,
+      name,
+      players: [] as Player[],
+      lineup: Array(appSettings.numberOfInnings).fill(null).map(() => ({}))
+    };
+    setGameState('teams', [...gameState.teams, newTeam]);
+    // Switch to the new team
+    setGameState('activeTeamId', newTeamId);
+  },
+
+  removeTeam: (teamId: Uid) => {
+    // Don't allow removing the last team
+    if (gameState.teams.length <= 1) return;
+
+    // @ts-ignore
+    setGameState('teams', gameState.teams.filter(t => t.id !== teamId));
+
+    // If we're removing the active team, switch to the first remaining team
+    if (gameState.activeTeamId === teamId) {
+      const remainingTeams = gameState.teams.filter(t => t.id !== teamId);
+      setGameState('activeTeamId', remainingTeams[0].id);
+    }
+  },
+
+  renameTeam: (teamId: string, newName: string) => {
+    const teamIndex = gameState.teams.findIndex(t => t.id === teamId);
+    if (teamIndex !== -1) {
+      setGameState('teams', teamIndex, 'name', newName);
+    }
+  },
+
+  switchTeam: (teamId: Uid) => {
+    if (gameState.teams.find(t => t.id === teamId)) {
+      setGameState('activeTeamId', teamId);
+    }
+  },
+
   addPlayer: (name: string, positions: Position[]) => {
     const newPlayer: Player = {
       id: crypto.randomUUID(),
@@ -122,30 +180,30 @@ export const storeActions = {
       positions
     };
 
-    setGameState('players', (players) => [...players, newPlayer]);
+    setGameState('teams', activeTeamIndex(), 'players', (players) => [...players, newPlayer]);
 
     // Initialize player in all innings to BENCH
-    for (let i = 0; i < appSettings.numberOfInnings; i++) {
-      setGameState('lineup', i, newPlayer.id, 'BENCH');
+    for(let i = 0; i < appSettings.numberOfInnings; i++){
+      setGameState('teams', activeTeamIndex(), 'lineup', i, newPlayer.id, 'BENCH');
     }
   },
 
   removePlayer: (playerId: string) => {
-    setGameState('players', (players) => players.filter(p => p.id !== playerId));
+    setGameState('teams', activeTeamIndex(), 'players', (players) => players.filter(p => p.id !== playerId));
 
-    const newLineup = gameState.lineup.map(lineup => omit([playerId], lineup));
-    setGameState('lineup', newLineup);
+    const newLineup = activeTeam().lineup.map(lineup => omit([playerId], lineup));
+    setGameState('teams', activeTeamIndex(), 'lineup', newLineup);
   },
 
   updatePlayerPosition: (playerId: string, inning: number, position: Position) => {
-    setGameState('lineup', inning, (currentInning) => ({
+    setGameState('teams', activeTeamIndex(), 'lineup', inning, (currentInning) => ({
       ...currentInning,
       [playerId]: position
     }));
   },
 
   resetInning: (inning: number) => {
-    setGameState('lineup', inning, (currentInning) => {
+    setGameState('teams', activeTeamIndex(), 'lineup', inning, (currentInning) => {
       const newInning: InningLineup = {};
       Object.keys(currentInning).forEach(playerId => {
         newInning[playerId] = 'BENCH';
@@ -155,7 +213,7 @@ export const storeActions = {
   },
 
   movePlayer: (fromIndex: number, toIndex: number) => {
-    setGameState('players', (players) => {
+    setGameState('teams', activeTeamIndex(), 'players', (players) => {
       const newPlayers = [...players];
       const [moved] = newPlayers.splice(fromIndex, 1);
       newPlayers.splice(toIndex, 0, moved);
@@ -164,8 +222,8 @@ export const storeActions = {
   },
 
   assignPositionsForInning: (inning: number) => {
-    const players = gameState.players;
-    if (players.length === 0) return;
+    const players = activeTeam().players;
+    if(players.length === 0) return;
 
     // Reset inning first
     const newAssignments: InningLineup = {};
@@ -178,7 +236,7 @@ export const storeActions = {
     const playersAvailable = [...players];
 
     // Shuffle players for randomness in assignment order
-    for (let i = playersAvailable.length - 1; i > 0; i--) {
+    for(let i = playersAvailable.length - 1; i > 0; i--){
       const j = Math.floor(Math.random() * (i + 1));
       [playersAvailable[i], playersAvailable[j]] = [playersAvailable[j], playersAvailable[i]];
     }
@@ -190,30 +248,30 @@ export const storeActions = {
         player.positions.includes(position) && newAssignments[player.id] === 'BENCH'
       );
 
-      if (availablePlayer) {
+      if(availablePlayer){
         newAssignments[availablePlayer.id] = position;
       }
     });
 
     // Update the store
-    setGameState('lineup', inning, newAssignments);
+    setGameState('teams', activeTeamIndex(), 'lineup', inning, newAssignments);
   }
 };
 
 // Validation helpers
-export function validateLineup(state: GameState, inning: number): ValidationError[] {
+export function validateLineup(state: GameState, inning: number): ValidationError[]{
 
   const errors: ValidationError[] = [];
-  const assignments = state.lineup[inning];
+  const assignments = activeTeam().lineup[inning];
 
-  if (!assignments) return errors;
+  if(!assignments) return errors;
 
   const usedPositions = new Set<Position>();
   const playerPositions = Object.values(assignments);
 
   // Check for duplicates (except BENCH)
   playerPositions.forEach(position => {
-    if (position !== 'BENCH' && usedPositions.has(position)) {
+    if(position !== 'BENCH' && usedPositions.has(position)){
       errors.push({
         inning,
         message: `Duplicate position: ${position}`,
@@ -225,7 +283,7 @@ export function validateLineup(state: GameState, inning: number): ValidationErro
 
   // Check for missing field positions
   FIELD_POSITIONS.forEach(position => {
-    if (!usedPositions.has(position)) {
+    if(!usedPositions.has(position)){
       errors.push({
         inning,
         message: `Missing position: ${position}`,
@@ -237,9 +295,9 @@ export function validateLineup(state: GameState, inning: number): ValidationErro
   return errors;
 }
 
-export function validateAllInnings(state: GameState): ValidationError[][] {
+export function validateAllInnings(state: GameState): ValidationError[][]{
   const allErrors: ValidationError[][] = [];
-  for (let i = 0; i < appSettings.numberOfInnings; i++) {
+  for(let i = 0; i < appSettings.numberOfInnings; i++){
     allErrors[i] = validateLineup(state, i);
   }
   return allErrors;

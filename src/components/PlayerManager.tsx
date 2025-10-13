@@ -1,5 +1,5 @@
 import { Component, createSignal, For, createMemo } from 'solid-js';
-import {gameState, sortedPlayers, storeActions, playerPositionCounts} from '../store';
+import {gameState, sortedPlayers, storeActions, playerPositionCounts, activeTeam} from '../store';
 import { Position, ALL_POSITIONS, FIELD_POSITIONS } from '../types';
 import './PlayerManager.css';
 
@@ -49,7 +49,7 @@ const PlayerManager: Component = () => {
     <div class="player-manager">
       <div class="player-header" onClick={() => setIsCollapsed(!isCollapsed())}>
         <h2>
-          Players {isCollapsed() ? '▶' : '▼'} ({gameState.players.length})
+          Players {isCollapsed() ? '▶' : '▼'} ({activeTeam().players.length})
         </h2>
       </div>
 
@@ -85,7 +85,7 @@ const PlayerManager: Component = () => {
               </div>
 
               <div class="position-checkboxes">
-                <For each={ALL_POSITIONS}>
+                <For each={FIELD_POSITIONS}>
                   {(position) => (
                     <label class="position-checkbox">
                       <input
