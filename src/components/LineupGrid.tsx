@@ -197,7 +197,7 @@ const LineupGrid: Component = () => {
                 onDrop={(e) => handleDrop(e, index())}
                 onDragEnd={handleDragEnd}
               >
-                <div class="player-cell" classList={{'too-many': playsMoreThanTwoInningsAtSamePosition(player.id)}}>
+                <div class="player-cell" classList={{'too-many': !printMode() &&playsMoreThanTwoInningsAtSamePosition(player.id)}}>
                   <span class="drag-handle">⋮⋮</span>
                   <div class="player-info">
                     <span class="player-name">{player.name}</span>
