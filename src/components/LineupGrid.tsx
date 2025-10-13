@@ -1,5 +1,6 @@
 import {Component, For, createSignal, createMemo, Show} from 'solid-js';
 import {gameState, rosterErrors, storeActions, playerPositionCounts} from '../store';
+import { appSettings } from '../settingsStore';
 import { Position, ALL_POSITIONS, FIELD_POSITIONS, ValidationError } from '../types';
 import './LineupGrid.css';
 
@@ -73,64 +74,67 @@ const LineupGrid: Component = () => {
   };
 
   // Create individual memos for each inning to ensure proper reactivity
-  const inningValidations = Array.from({ length: 6 }, (_, inning) =>
-    createMemo(() => {
-      const errors: ValidationError[] = [];
-      const assignments = gameState.lineup[inning];
+  const inningValidations = createMemo(() => {
+    return Array.from({ length: appSettings.numberOfInnings }, (_, inning) =>
+      createMemo(() => {
+        const errors: ValidationError[] = [];
+        const assignments = gameState.lineup[inning];
 
-      if (!assignments || Object.keys(assignments).length === 0) {
-        // If no assignments, all positions are missing
-        FIELD_POSITIONS.forEach(position => {
-          errors.push({
-            inning,
-            message: `Missing position: ${position}`,
-            type: 'missing'
-          });
-        });
-        return errors;
-      }
-
-      const usedPositions = new Set<Position>();
-      const playerPositions = Object.values(assignments);
-      const duplicateTracker = new Map<Position, number>();
-
-      // Count position usage and find duplicates
-      playerPositions.forEach(position => {
-        if (position && position !== 'BENCH') {
-          const count = duplicateTracker.get(position) || 0;
-          duplicateTracker.set(position, count + 1);
-
-          if (count >= 1) { // Already seen this position
+        if (!assignments || Object.keys(assignments).length === 0) {
+          // If no assignments, all positions are missing
+          FIELD_POSITIONS.forEach(position => {
             errors.push({
               inning,
-              message: `Duplicate position: ${position}`,
-              type: 'duplicate'
+              message: `Missing position: ${position}`,
+              type: 'missing'
+            });
+          });
+          return errors;
+        }
+
+        const usedPositions = new Set<Position>();
+        const playerPositions = Object.values(assignments);
+        const duplicateTracker = new Map<Position, number>();
+
+        // Count position usage and find duplicates
+        playerPositions.forEach(position => {
+          if (position && position !== 'BENCH') {
+            const count = duplicateTracker.get(position) || 0;
+            duplicateTracker.set(position, count + 1);
+
+            if (count >= 1) { // Already seen this position
+              errors.push({
+                inning,
+                message: `Duplicate position: ${position}`,
+                type: 'duplicate'
+              });
+            }
+            usedPositions.add(position);
+          }
+        });
+
+        // Check for missing field positions
+        FIELD_POSITIONS.forEach(position => {
+          if (!usedPositions.has(position)) {
+            errors.push({
+              inning,
+              message: `Missing position: ${position}`,
+              type: 'missing'
             });
           }
-          usedPositions.add(position);
-        }
-      });
+        });
 
-      // Check for missing field positions
-      FIELD_POSITIONS.forEach(position => {
-        if (!usedPositions.has(position)) {
-          errors.push({
-            inning,
-            message: `Missing position: ${position}`,
-            type: 'missing'
-          });
-        }
-      });
-
-      return errors;
-    })
-  );
+        return errors;
+      })()
+    );
+  });
 
   const getOrdinal = (value: number) => value === 1 ? 'st' : value === 2 ? 'nd' : value === 3 ? 'rd': 'th';
 
 
   const hasInningErrors = (inning: number) => {
-    return inningValidations[inning]()?.length > 0;
+    const validations = inningValidations();
+    return validations[inning]?.length > 0;
   };
 
   const formatPositionSummary = (playerId: string) => {
@@ -144,7 +148,7 @@ const LineupGrid: Component = () => {
 
   const playsMoreThanTwoInningsAtSamePosition = (playerId: string) => {
     const counts = playerPositionCounts()[playerId] || {};
-    return ALL_POSITIONS.some(pos => counts[pos] > 2);
+    return ALL_POSITIONS.some(pos => counts[pos] > appSettings.warningThreshold);
   };
 
   function togglePrint(){
@@ -156,9 +160,9 @@ const LineupGrid: Component = () => {
       <h2>Lineup Grid <a href="#" onClick={() => togglePrint()}>{printMode() ? "Edit": "Print"}</a></h2>
 
       <div class="grid-container">
-        <div class="grid-header">
+        <div class="grid-header" style={`grid-template-columns: 200px repeat(${appSettings.numberOfInnings}, 1fr);`}>
           <div class="player-column-header">Player</div>
-          <For each={Array(6).fill(0)}>
+          <For each={Array(appSettings.numberOfInnings).fill(0)}>
             {(_, index) => (
               <div class={`inning-header ${hasInningErrors(index()) ? 'has-errors' : ''}`}>
                 <span>Inning {index() + 1}</span>
@@ -185,11 +189,12 @@ const LineupGrid: Component = () => {
           </For>
         </div>
 
-        <div class="grid-body">
+        <div class="grid-body" style={`min-width: ${200 + (appSettings.numberOfInnings * 100)}px;`}>
           <For each={gameState.players}>
             {(player, index) => (
               <div
                 class={`player-row ${draggedPlayer() === player.id ? 'dragging' : ''} ${draggedOverIndex() === index() ? 'drag-over' : ''}`}
+                style={`grid-template-columns: 200px repeat(${appSettings.numberOfInnings}, 1fr);`}
                 draggable={true}
                 onDragStart={(e) => handleDragStart(e, player.id, index())}
                 onDragOver={(e) => handleDragOver(e, index())}
@@ -207,7 +212,7 @@ const LineupGrid: Component = () => {
                   </div>
                 </div>
 
-                <For each={Array(6).fill(0)}>
+                <For each={Array(appSettings.numberOfInnings).fill(0)}>
                   {(_, inningIndex) => (
                     <div class="position-cell">
                       <Show when={!printMode()}>

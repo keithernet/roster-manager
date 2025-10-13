@@ -1,6 +1,7 @@
 import { createStore } from 'solid-js/store';
 import {createComputed, createEffect, createMemo} from 'solid-js';
 import { GameState, Player, InningLineup, Position, FIELD_POSITIONS, ValidationError } from './types';
+import { appSettings } from './settingsStore';
 import {sortBy, omit} from 'ramda';
 
 const STORAGE_KEY = 'baseball-roster-state';
@@ -8,7 +9,7 @@ const STORAGE_KEY = 'baseball-roster-state';
 function createInitialState(): GameState {
   return {
     players: [],
-    lineup: Array(6).fill(null).map(() => ({}))
+    lineup: Array(appSettings.numberOfInnings).fill(null).map(() => ({}))
   };
 }
 
@@ -17,10 +18,17 @@ function loadStateFromStorage(): GameState {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Ensure we have 6 innings
-      while (parsed.lineup.length < 6) {
+      const requiredInnings = appSettings.numberOfInnings;
+
+      // Ensure we have the correct number of innings
+      while (parsed.lineup.length < requiredInnings) {
         parsed.lineup.push({});
       }
+      // Trim if we have too many innings
+      if (parsed.lineup.length > requiredInnings) {
+        parsed.lineup = parsed.lineup.slice(0, requiredInnings);
+      }
+
       // Initialize missing players to BENCH
       parsed.players.forEach((player: Player) => {
         parsed.lineup.forEach((inning: InningLineup, index: number) => {
@@ -61,6 +69,27 @@ createEffect(() => {
   saveStateToStorage(gameState);
 });
 
+// Adjust lineup when number of innings changes
+createEffect(() => {
+  const requiredInnings = appSettings.numberOfInnings;
+  const currentInnings = gameState.lineup.length;
+
+  if (currentInnings < requiredInnings) {
+    // Add missing innings
+    const newInnings = Array(requiredInnings - currentInnings).fill(null).map(() => {
+      const inning: InningLineup = {};
+      gameState.players.forEach(player => {
+        inning[player.id] = 'BENCH';
+      });
+      return inning;
+    });
+    setGameState('lineup', [...gameState.lineup, ...newInnings]);
+  } else if (currentInnings > requiredInnings) {
+    // Remove extra innings
+    setGameState('lineup', gameState.lineup.slice(0, requiredInnings));
+  }
+});
+
 export const rosterErrors = createMemo(() =>
   validateAllInnings(gameState)
 , )
@@ -96,7 +125,7 @@ export const storeActions = {
     setGameState('players', (players) => [...players, newPlayer]);
 
     // Initialize player in all innings to BENCH
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < appSettings.numberOfInnings; i++) {
       setGameState('lineup', i, newPlayer.id, 'BENCH');
     }
   },
@@ -210,7 +239,7 @@ export function validateLineup(state: GameState, inning: number): ValidationErro
 
 export function validateAllInnings(state: GameState): ValidationError[][] {
   const allErrors: ValidationError[][] = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < appSettings.numberOfInnings; i++) {
     allErrors[i] = validateLineup(state, i);
   }
   return allErrors;

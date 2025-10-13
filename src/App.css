@@ -7,9 +7,22 @@
   background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   color: white;
   padding: 30px 20px;
-  text-align: center;
   box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
   margin-bottom: 30px;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-text {
+  text-align: center;
+  flex: 1;
 }
 
 .App-header h1 {
@@ -27,8 +40,29 @@
   font-weight: 400;
 }
 
+.settings-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.settings-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
 .App-main {
-  max-width: 1400px;
+  max-width: 90%;
   margin: 0 auto;
   padding: 0 20px 40px;
 }
