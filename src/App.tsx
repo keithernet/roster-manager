@@ -54,7 +54,7 @@ const App: Component = () => {
               onClick={() => setIsSettingsOpen(true)}
               title="Settings"
             >
-              ⚙️
+              <span class="settings-icon">⚙️</span>
             </button>
           </div>
         </div>

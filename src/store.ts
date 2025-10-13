@@ -1,7 +1,6 @@
 import {createStore} from 'solid-js/store';
 import {createEffect, createMemo} from 'solid-js';
-import {FIELD_POSITIONS, GameState, InningLineup, Player, Position, Uid, ValidationError} from './types';
-import {appSettings} from './settingsStore';
+import {FIELD_POSITIONS, GameState, InningLineup, Player, Position, Team, Uid, ValidationError} from './types';
 import {omit, sortBy} from 'ramda';
 
 const STORAGE_KEY = 'baseball-roster-state';
@@ -18,8 +17,10 @@ function createInitialState(): GameState{
       {
         id: initialTeamId,
         name: 'My Team',
-          players: [] as Player[],
-          lineup: Array(appSettings.numberOfInnings).fill(null).map(() => ({}))
+        numberOfInnings: 6,
+        warningThreshold: 2,
+        players: [] as Player[],
+        lineup: Array(6).fill(null).map(() => ({}))
       }]
   };
 }
@@ -29,9 +30,18 @@ function loadStateFromStorage(): GameState{
     const saved = localStorage.getItem(STORAGE_KEY);
     if(saved){
       const parsed = JSON.parse(saved) as GameState;
-      const requiredInnings = appSettings.numberOfInnings;
 
       parsed.teams.forEach(team => {
+        // Ensure team has numberOfInnings and warningThreshold (for backward compatibility)
+        if (!team.numberOfInnings) {
+          team.numberOfInnings = 6;
+        }
+        if (!team.warningThreshold) {
+          team.warningThreshold = 2;
+        }
+
+        const requiredInnings = team.numberOfInnings;
+
         // Ensure we have the correct number of innings
         while(team.lineup.length < requiredInnings){
           team.lineup.push({});
@@ -87,24 +97,25 @@ createEffect(() => {
   saveStateToStorage(gameState);
 });
 
-// Adjust lineup when number of innings changes
+// Adjust lineup when number of innings changes for active team
 createEffect(() => {
-  const requiredInnings = appSettings.numberOfInnings;
-  const currentInnings = activeTeam().lineup.length;
+  const team = activeTeam();
+  const requiredInnings = team.numberOfInnings;
+  const currentInnings = team.lineup.length;
 
   if(currentInnings < requiredInnings){
     // Add missing innings
     const newInnings = Array(requiredInnings - currentInnings).fill(null).map(() => {
       const inning: InningLineup = {};
-      activeTeam().players.forEach(player => {
+      team.players.forEach(player => {
         inning[player.id] = 'BENCH';
       });
       return inning;
     });
-    setGameState('teams', activeTeamIndex(),'lineup', [...activeTeam().lineup, ...newInnings]);
+    setGameState('teams', activeTeamIndex(),'lineup', [...team.lineup, ...newInnings]);
   } else if(currentInnings > requiredInnings){
     // Remove extra innings
-    setGameState('teams', activeTeamIndex(), 'lineup', activeTeam().lineup.slice(0, requiredInnings));
+    setGameState('teams', activeTeamIndex(), 'lineup', team.lineup.slice(0, requiredInnings));
   }
 });
 
@@ -135,11 +146,13 @@ export const playerPositionCounts = createMemo(() => {
 export const storeActions = {
   addTeam: (name: string) => {
     const newTeamId = uid();
-    const newTeam = {
+    const newTeam: Team = {
       id: newTeamId,
       name,
+      numberOfInnings: 6,
+      warningThreshold: 2,
       players: [] as Player[],
-      lineup: Array(appSettings.numberOfInnings).fill(null).map(() => ({}))
+      lineup: Array(6).fill(null).map(() => ({}))
     };
     setGameState('teams', [...gameState.teams, newTeam]);
     // Switch to the new team
@@ -173,6 +186,20 @@ export const storeActions = {
     }
   },
 
+  setTeamInnings: (teamId: Uid, numberOfInnings: number) => {
+    const teamIndex = gameState.teams.findIndex(t => t.id === teamId);
+    if (teamIndex !== -1 && numberOfInnings >= 1 && numberOfInnings <= 12) {
+      setGameState('teams', teamIndex, 'numberOfInnings', numberOfInnings);
+    }
+  },
+
+  setTeamWarningThreshold: (teamId: Uid, threshold: number) => {
+    const teamIndex = gameState.teams.findIndex(t => t.id === teamId);
+    if (teamIndex !== -1 && threshold >= 1 && threshold <= 10) {
+      setGameState('teams', teamIndex, 'warningThreshold', threshold);
+    }
+  },
+
   addPlayer: (name: string, positions: Position[]) => {
     const newPlayer: Player = {
       id: crypto.randomUUID(),
@@ -183,7 +210,7 @@ export const storeActions = {
     setGameState('teams', activeTeamIndex(), 'players', (players) => [...players, newPlayer]);
 
     // Initialize player in all innings to BENCH
-    for(let i = 0; i < appSettings.numberOfInnings; i++){
+    for(let i = 0; i < activeTeam().numberOfInnings; i++){
       setGameState('teams', activeTeamIndex(), 'lineup', i, newPlayer.id, 'BENCH');
     }
   },
@@ -297,7 +324,8 @@ export function validateLineup(state: GameState, inning: number): ValidationErro
 
 export function validateAllInnings(state: GameState): ValidationError[][]{
   const allErrors: ValidationError[][] = [];
-  for(let i = 0; i < appSettings.numberOfInnings; i++){
+  const team = activeTeam();
+  for(let i = 0; i < team.numberOfInnings; i++){
     allErrors[i] = validateLineup(state, i);
   }
   return allErrors;

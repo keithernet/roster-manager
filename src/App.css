@@ -138,8 +138,8 @@
   flex-shrink: 0;
 }
 
-.settings-button:hover {
-  background: rgba(255, 255, 255, 0.3);
+.settings-icon:hover {
+  /*background: rgba(255, 255, 255, 0.3);*/
   transform: rotate(90deg);
 }
 

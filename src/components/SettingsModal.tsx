@@ -1,6 +1,5 @@
 import { Component, Show, For, createSignal } from 'solid-js';
-import { appSettings, settingsActions } from '../settingsStore';
-import { gameState, storeActions } from '../store';
+import { gameState, storeActions, activeTeam } from '../store';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
@@ -15,12 +14,12 @@ const SettingsModal: Component<SettingsModalProps> = (props) => {
 
   const handleNumberOfInningsChange = (e: Event) => {
     const value = parseInt((e.target as HTMLInputElement).value);
-    settingsActions.setNumberOfInnings(value);
+    storeActions.setTeamInnings(activeTeam().id, value);
   };
 
   const handleWarningThresholdChange = (e: Event) => {
     const value = parseInt((e.target as HTMLInputElement).value);
-    settingsActions.setWarningThreshold(value);
+    storeActions.setTeamWarningThreshold(activeTeam().id, value);
   };
 
   const handleAddTeam = () => {
@@ -80,16 +79,27 @@ const SettingsModal: Component<SettingsModalProps> = (props) => {
               <div class="teams-list">
                 <For each={gameState.teams}>
                   {(team) => (
-                    <div class="team-item">
+                    <div
+                      class={`team-item ${team.id === gameState.activeTeamId ? 'active-team' : ''}`}
+                      onClick={() => storeActions.switchTeam(team.id)}
+                    >
                       <Show
                         when={editingTeamId() === team.id}
                         fallback={
                           <>
-                            <span class="team-name">{team.name}</span>
+                            <span class="team-name">
+                              {team.name}
+                              <Show when={team.id === gameState.activeTeamId}>
+                                <span class="active-badge">Active</span>
+                              </Show>
+                            </span>
                             <div class="team-actions">
                               <button
                                 class="team-edit-btn"
-                                onClick={() => startEditingTeam(team.id, team.name)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  startEditingTeam(team.id, team.name);
+                                }}
                                 title="Rename team"
                               >
                                 ✏️
@@ -97,7 +107,10 @@ const SettingsModal: Component<SettingsModalProps> = (props) => {
                               <Show when={gameState.teams.length > 1}>
                                 <button
                                   class="team-delete-btn"
-                                  onClick={() => handleRemoveTeam(team.id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveTeam(team.id);
+                                  }}
                                   title="Delete team"
                                 >
                                   🗑️
@@ -155,22 +168,22 @@ const SettingsModal: Component<SettingsModalProps> = (props) => {
 
             <div class="setting-group">
               <label for="innings-count">
-                Number of Innings
-                <span class="setting-description">Set how many innings are in a game (1-12)</span>
+                Number of Innings for {activeTeam().name}
+                <span class="setting-description">Set how many innings are in a game for this team (1-12)</span>
               </label>
               <input
                 id="innings-count"
                 type="number"
                 min="1"
                 max="12"
-                value={appSettings.numberOfInnings}
+                value={activeTeam().numberOfInnings}
                 onInput={handleNumberOfInningsChange}
               />
             </div>
 
             <div class="setting-group">
               <label for="warning-threshold">
-                Position Warning Threshold
+                Position Warning Threshold for {activeTeam().name}
                 <span class="setting-description">
                   Warn when a player plays more than this many innings at the same position (1-10)
                 </span>
@@ -180,7 +193,7 @@ const SettingsModal: Component<SettingsModalProps> = (props) => {
                 type="number"
                 min="1"
                 max="10"
-                value={appSettings.warningThreshold}
+                value={activeTeam().warningThreshold}
                 onInput={handleWarningThresholdChange}
               />
             </div>

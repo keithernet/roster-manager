@@ -1,6 +1,5 @@
 import {Component, For, createSignal, createMemo, Show} from 'solid-js';
 import {gameState, rosterErrors, storeActions, playerPositionCounts, activeTeam} from '../store';
-import { appSettings } from '../settingsStore';
 import { Position, ALL_POSITIONS, FIELD_POSITIONS, ValidationError } from '../types';
 import './LineupGrid.css';
 
@@ -75,10 +74,11 @@ const LineupGrid: Component = () => {
 
   // Create individual memos for each inning to ensure proper reactivity
   const inningValidations = createMemo(() => {
-    return Array.from({ length: appSettings.numberOfInnings }, (_, inning) =>
+    const team = activeTeam();
+    return Array.from({ length: team.numberOfInnings }, (_, inning) =>
       createMemo(() => {
         const errors: ValidationError[] = [];
-        const assignments = activeTeam().lineup[inning];
+        const assignments = team.lineup[inning];
 
         if (!assignments || Object.keys(assignments).length === 0) {
           // If no assignments, all positions are missing
@@ -148,7 +148,7 @@ const LineupGrid: Component = () => {
 
   const playsMoreThanTwoInningsAtSamePosition = (playerId: string) => {
     const counts = playerPositionCounts()[playerId] || {};
-    return ALL_POSITIONS.some(pos => counts[pos] > appSettings.warningThreshold);
+    return ALL_POSITIONS.some(pos => counts[pos] > activeTeam().warningThreshold);
   };
 
   function togglePrint(){
@@ -160,9 +160,9 @@ const LineupGrid: Component = () => {
       <h2>{activeTeam().name} <a href="#" onClick={() => togglePrint()}>{printMode() ? "Edit": "Print"}</a></h2>
 
       <div class="grid-container">
-        <div class="grid-header" style={`grid-template-columns: 200px repeat(${appSettings.numberOfInnings}, 1fr);`}>
+        <div class="grid-header" style={`grid-template-columns: 200px repeat(${activeTeam().numberOfInnings}, 1fr);`}>
           <div class="player-column-header">Player</div>
-          <For each={Array(appSettings.numberOfInnings).fill(0)}>
+          <For each={Array(activeTeam().numberOfInnings).fill(0)}>
             {(_, index) => (
               <div class={`inning-header ${hasInningErrors(index()) ? 'has-errors' : ''}`}>
                 <span>Inning {index() + 1}</span>
@@ -189,12 +189,12 @@ const LineupGrid: Component = () => {
           </For>
         </div>
 
-        <div class="grid-body" style={`min-width: ${200 + (appSettings.numberOfInnings * 100)}px;`}>
+        <div class="grid-body" style={`min-width: ${200 + (activeTeam().numberOfInnings * 100)}px;`}>
           <For each={activeTeam().players}>
             {(player, index) => (
               <div
                 class={`player-row ${draggedPlayer() === player.id ? 'dragging' : ''} ${draggedOverIndex() === index() ? 'drag-over' : ''}`}
-                style={`grid-template-columns: 200px repeat(${appSettings.numberOfInnings}, 1fr);`}
+                style={`grid-template-columns: 200px repeat(${activeTeam().numberOfInnings}, 1fr);`}
                 draggable={true}
                 onDragStart={(e) => handleDragStart(e, player.id, index())}
                 onDragOver={(e) => handleDragOver(e, index())}
@@ -212,7 +212,7 @@ const LineupGrid: Component = () => {
                   </div>
                 </div>
 
-                <For each={Array(appSettings.numberOfInnings).fill(0)}>
+                <For each={Array(activeTeam().numberOfInnings).fill(0)}>
                   {(_, inningIndex) => (
                     <div class="position-cell">
                       <Show when={!printMode()}>
